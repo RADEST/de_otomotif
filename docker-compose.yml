@@ -1,10 +1,8 @@
-version: "3.8"
-
 services:
   # ── MySQL 8.0 ──────────────────────────────────────────────
   mysql:
     image: mysql:8.0
-    container_name: astraworld-mysql
+    container_name: dw-mysql
     restart: unless-stopped
     env_file: .env
     ports:
@@ -13,7 +11,7 @@ services:
       - ./sql/init.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
       - mysql_data:/var/lib/mysql
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-p${MYSQL_ROOT_PASSWORD}"]
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-proot"]
       interval: 5s
       timeout: 5s
       retries: 20
@@ -22,11 +20,16 @@ services:
   # ── Python Pipeline ────────────────────────────────────────
   pipeline:
     build: .
-    container_name: astraworld-pipeline
+    container_name: dw-pipeline
     depends_on:
       mysql:
         condition: service_healthy
-    env_file: .env
+    environment:
+      - MYSQL_HOST=mysql
+      - MYSQL_PORT=3306
+      - MYSQL_USER=root
+      - MYSQL_PASSWORD=root
+      - MYSQL_DATABASE=astraworld
     volumes:
       - ./data_input:/app/data_input
       - ./data_archive:/app/data_archive
