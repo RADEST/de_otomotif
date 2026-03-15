@@ -1,0 +1,460 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Data Warehouse Design — Maju Jaya</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #0f172a;
+            color: #e2e8f0;
+            min-height: 100vh;
+            padding: 40px;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 48px;
+        }
+        .header h1 {
+            font-size: 32px;
+            font-weight: 800;
+            background: linear-gradient(135deg, #60a5fa, #a78bfa, #f472b6);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 8px;
+        }
+        .header p {
+            color: #94a3b8;
+            font-size: 15px;
+        }
+
+        /* ── Layer ─────────────── */
+        .layer {
+            margin-bottom: 40px;
+            position: relative;
+        }
+        .layer-label {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+        .layer-badge {
+            padding: 6px 16px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        .layer-badge.raw      { background: #1e3a5f; color: #60a5fa; border: 1px solid #2563eb40; }
+        .layer-badge.cleaned  { background: #1a3a2a; color: #4ade80; border: 1px solid #22c55e40; }
+        .layer-badge.datamart { background: #3b1f4a; color: #c084fc; border: 1px solid #a855f740; }
+        .layer-title {
+            font-size: 18px;
+            font-weight: 600;
+        }
+        .layer-desc {
+            font-size: 13px;
+            color: #64748b;
+            margin-left: auto;
+        }
+
+        /* ── Cards grid ────────── */
+        .cards {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+        .card {
+            background: #1e293b;
+            border: 1px solid #334155;
+            border-radius: 14px;
+            padding: 24px;
+            min-width: 240px;
+            flex: 1;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 30px rgba(0,0,0,0.3);
+        }
+        .card.raw      { border-top: 3px solid #3b82f6; }
+        .card.cleaned  { border-top: 3px solid #22c55e; }
+        .card.datamart { border-top: 3px solid #a855f7; }
+
+        .card-icon {
+            font-size: 28px;
+            margin-bottom: 8px;
+        }
+        .card h3 {
+            font-size: 15px;
+            font-weight: 700;
+            margin-bottom: 4px;
+        }
+        .card .source {
+            font-size: 11px;
+            color: #64748b;
+            margin-bottom: 14px;
+        }
+        .card table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 12px;
+        }
+        .card th {
+            text-align: left;
+            padding: 4px 8px 4px 0;
+            color: #94a3b8;
+            font-weight: 500;
+            border-bottom: 1px solid #334155;
+        }
+        .card td {
+            padding: 4px 8px 4px 0;
+            color: #cbd5e1;
+        }
+        .card td.type {
+            color: #64748b;
+            font-family: 'Courier New', monospace;
+            font-size: 11px;
+        }
+        .pk { color: #fbbf24; font-size: 10px; font-weight: 700; }
+        .fk { color: #60a5fa; font-size: 10px; font-weight: 700; }
+        .new-col { color: #4ade80; font-style: italic; }
+
+        /* ── Flow arrows ───────── */
+        .flow {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 16px 0;
+            gap: 12px;
+        }
+        .flow-arrow {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+        }
+        .flow-arrow svg { width: 32px; height: 32px; }
+        .flow-label {
+            font-size: 11px;
+            color: #64748b;
+            font-weight: 500;
+            background: #1e293b;
+            padding: 4px 12px;
+            border-radius: 12px;
+            border: 1px dashed #334155;
+        }
+
+        /* ── Legend ─────────────── */
+        .legend {
+            margin-top: 40px;
+            padding: 24px;
+            background: #1e293b;
+            border-radius: 14px;
+            border: 1px solid #334155;
+        }
+        .legend h4 {
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 12px;
+        }
+        .legend-items {
+            display: flex;
+            gap: 24px;
+            flex-wrap: wrap;
+            font-size: 12px;
+            color: #94a3b8;
+        }
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .legend-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+        }
+
+        /* footer */
+        .footer {
+            text-align: center;
+            margin-top: 40px;
+            color: #475569;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <h1>Data Warehouse Architecture</h1>
+        <p>PT Maju Jaya — Retail Otomotif &nbsp;|&nbsp; MySQL Data Warehouse Design</p>
+    </div>
+
+    <!-- ════════ LEVEL 1: RAW / LANDING ════════ -->
+    <div class="layer">
+        <div class="layer-label">
+            <span class="layer-badge raw">Level 1</span>
+            <span class="layer-title">Raw / Landing</span>
+            <span class="layer-desc">Data as-is dari sumber (MySQL existing + CSV ingestion)</span>
+        </div>
+        <div class="cards">
+            <div class="card raw">
+                <div class="card-icon">👤</div>
+                <h3>customers_raw</h3>
+                <div class="source">Source: MySQL existing</div>
+                <table>
+                    <tr><th>Column</th><th>Type</th><th></th></tr>
+                    <tr><td>id</td><td class="type">INT</td><td><span class="pk">PK</span></td></tr>
+                    <tr><td>name</td><td class="type">VARCHAR(100)</td><td></td></tr>
+                    <tr><td>dob</td><td class="type">VARCHAR(20)</td><td>⚠️ mixed format</td></tr>
+                    <tr><td>created_at</td><td class="type">DATETIME(3)</td><td></td></tr>
+                </table>
+            </div>
+
+            <div class="card raw">
+                <div class="card-icon">🚗</div>
+                <h3>sales_raw</h3>
+                <div class="source">Source: MySQL existing</div>
+                <table>
+                    <tr><th>Column</th><th>Type</th><th></th></tr>
+                    <tr><td>vin</td><td class="type">VARCHAR(20)</td><td><span class="pk">PK</span></td></tr>
+                    <tr><td>customer_id</td><td class="type">INT</td><td><span class="fk">FK</span></td></tr>
+                    <tr><td>model</td><td class="type">VARCHAR(50)</td><td></td></tr>
+                    <tr><td>invoice_date</td><td class="type">DATE</td><td></td></tr>
+                    <tr><td>price</td><td class="type">VARCHAR(20)</td><td>⚠️ string</td></tr>
+                    <tr><td>created_at</td><td class="type">DATETIME(3)</td><td></td></tr>
+                </table>
+            </div>
+
+            <div class="card raw">
+                <div class="card-icon">🔧</div>
+                <h3>after_sales_raw</h3>
+                <div class="source">Source: MySQL existing</div>
+                <table>
+                    <tr><th>Column</th><th>Type</th><th></th></tr>
+                    <tr><td>service_ticket</td><td class="type">VARCHAR(20)</td><td><span class="pk">PK</span></td></tr>
+                    <tr><td>vin</td><td class="type">VARCHAR(20)</td><td><span class="fk">FK</span></td></tr>
+                    <tr><td>customer_id</td><td class="type">INT</td><td><span class="fk">FK</span></td></tr>
+                    <tr><td>model</td><td class="type">VARCHAR(50)</td><td></td></tr>
+                    <tr><td>service_date</td><td class="type">DATE</td><td></td></tr>
+                    <tr><td>service_type</td><td class="type">VARCHAR(10)</td><td></td></tr>
+                    <tr><td>created_at</td><td class="type">DATETIME(3)</td><td></td></tr>
+                </table>
+            </div>
+
+            <div class="card raw">
+                <div class="card-icon">📍</div>
+                <h3>customer_addresses_raw</h3>
+                <div class="source">Source: CSV file (daily ingestion)</div>
+                <table>
+                    <tr><th>Column</th><th>Type</th><th></th></tr>
+                    <tr><td>id</td><td class="type">INT</td><td><span class="pk">PK</span></td></tr>
+                    <tr><td>customer_id</td><td class="type">INT</td><td><span class="fk">FK</span></td></tr>
+                    <tr><td>address</td><td class="type">VARCHAR(255)</td><td></td></tr>
+                    <tr><td>city</td><td class="type">VARCHAR(100)</td><td>⚠️ casing</td></tr>
+                    <tr><td>province</td><td class="type">VARCHAR(100)</td><td>⚠️ casing</td></tr>
+                    <tr><td>created_at</td><td class="type">DATETIME(3)</td><td></td></tr>
+                    <tr><td class="new-col">source_file</td><td class="type">VARCHAR(100)</td><td>audit</td></tr>
+                    <tr><td class="new-col">ingested_at</td><td class="type">DATETIME</td><td>audit</td></tr>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── Flow arrow ── -->
+    <div class="flow">
+        <div class="flow-arrow">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2">
+                <path d="M12 5v14M5 12l7 7 7-7"/>
+            </svg>
+        </div>
+        <span class="flow-label">clean_data.py &nbsp;— Standardize formats, parse types, flag entities</span>
+        <div class="flow-arrow">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2">
+                <path d="M12 5v14M5 12l7 7 7-7"/>
+            </svg>
+        </div>
+    </div>
+
+    <!-- ════════ LEVEL 2: CLEANED / STAGING ════════ -->
+    <div class="layer">
+        <div class="layer-label">
+            <span class="layer-badge cleaned">Level 2</span>
+            <span class="layer-title">Cleaned / Staging</span>
+            <span class="layer-desc">Data sudah dinormalisasi, siap untuk aggregasi</span>
+        </div>
+        <div class="cards">
+            <div class="card cleaned">
+                <div class="card-icon">👤 ✅</div>
+                <h3>customers_cleaned</h3>
+                <div class="source">From: customers_raw — dob standardized, company detected</div>
+                <table>
+                    <tr><th>Column</th><th>Type</th><th>Cleaning</th></tr>
+                    <tr><td>id</td><td class="type">INT</td><td><span class="pk">PK</span></td></tr>
+                    <tr><td>name</td><td class="type">VARCHAR(100)</td><td></td></tr>
+                    <tr><td>dob</td><td class="type">DATE</td><td>✅ YYYY-MM-DD</td></tr>
+                    <tr><td class="new-col">is_company</td><td class="type">TINYINT(1)</td><td>✅ PT/CV detected</td></tr>
+                    <tr><td>created_at</td><td class="type">DATETIME(3)</td><td></td></tr>
+                    <tr><td class="new-col">cleaned_at</td><td class="type">DATETIME</td><td>audit</td></tr>
+                </table>
+            </div>
+
+            <div class="card cleaned">
+                <div class="card-icon">🚗 ✅</div>
+                <h3>sales_cleaned</h3>
+                <div class="source">From: sales_raw — price parsed to numeric</div>
+                <table>
+                    <tr><th>Column</th><th>Type</th><th>Cleaning</th></tr>
+                    <tr><td>vin</td><td class="type">VARCHAR(20)</td><td><span class="pk">PK</span></td></tr>
+                    <tr><td>customer_id</td><td class="type">INT</td><td><span class="fk">FK</span></td></tr>
+                    <tr><td>model</td><td class="type">VARCHAR(50)</td><td></td></tr>
+                    <tr><td>invoice_date</td><td class="type">DATE</td><td></td></tr>
+                    <tr><td>price_raw</td><td class="type">VARCHAR(20)</td><td>original</td></tr>
+                    <tr><td class="new-col">price_numeric</td><td class="type">BIGINT</td><td>✅ 350000000</td></tr>
+                    <tr><td>created_at</td><td class="type">DATETIME(3)</td><td></td></tr>
+                    <tr><td class="new-col">cleaned_at</td><td class="type">DATETIME</td><td>audit</td></tr>
+                </table>
+            </div>
+
+            <div class="card cleaned" style="opacity: 0.7;">
+                <div class="card-icon">📍 ✅</div>
+                <h3>customer_addresses_raw</h3>
+                <div class="source">In-place update — city/province casing standardized</div>
+                <table>
+                    <tr><th>Column</th><th>Cleaning</th></tr>
+                    <tr><td>city</td><td>✅ Title Case</td></tr>
+                    <tr><td>province</td><td>✅ UPPER CASE</td></tr>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── Flow arrow ── -->
+    <div class="flow">
+        <div class="flow-arrow">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#a855f7" stroke-width="2">
+                <path d="M12 5v14M5 12l7 7 7-7"/>
+            </svg>
+        </div>
+        <span class="flow-label">build_datamart.py &nbsp;— Aggregate, classify, JOIN, daily rebuild</span>
+        <div class="flow-arrow">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#a855f7" stroke-width="2">
+                <path d="M12 5v14M5 12l7 7 7-7"/>
+            </svg>
+        </div>
+    </div>
+
+    <!-- ════════ LEVEL 3: DATAMART ════════ -->
+    <div class="layer">
+        <div class="layer-label">
+            <span class="layer-badge datamart">Level 3</span>
+            <span class="layer-title">Datamart</span>
+            <span class="layer-desc">Aggregated report tables — daily rebuild (TRUNCATE + INSERT)</span>
+        </div>
+        <div class="cards">
+            <div class="card datamart">
+                <div class="card-icon">📊</div>
+                <h3>dm_sales_report</h3>
+                <div class="source">Report: Penjualan per periode, klasifikasi harga, model</div>
+                <table>
+                    <tr><th>Column</th><th>Type</th><th>Description</th></tr>
+                    <tr><td>periode</td><td class="type">VARCHAR(7)</td><td>YYYY-MM</td></tr>
+                    <tr><td>class</td><td class="type">VARCHAR(10)</td><td>LOW / MEDIUM / HIGH</td></tr>
+                    <tr><td>model</td><td class="type">VARCHAR(50)</td><td></td></tr>
+                    <tr><td>total</td><td class="type">BIGINT</td><td>SUM(price_numeric)</td></tr>
+                </table>
+                <div style="margin-top:12px; font-size:11px; color:#94a3b8; border-top:1px solid #334155; padding-top:10px;">
+                    <strong style="color:#c084fc;">Klasifikasi:</strong><br>
+                    LOW: 100jt — 250jt &nbsp;|&nbsp; MEDIUM: 250jt — 400jt &nbsp;|&nbsp; HIGH: &gt;400jt
+                </div>
+            </div>
+
+            <div class="card datamart">
+                <div class="card-icon">🔧📋</div>
+                <h3>dm_service_report</h3>
+                <div class="source">Report: Frekuensi servis per customer/VIN per tahun</div>
+                <table>
+                    <tr><th>Column</th><th>Type</th><th>Description</th></tr>
+                    <tr><td>periode</td><td class="type">VARCHAR(4)</td><td>YYYY</td></tr>
+                    <tr><td>vin</td><td class="type">VARCHAR(20)</td><td></td></tr>
+                    <tr><td>customer_name</td><td class="type">VARCHAR(100)</td><td>JOIN customers</td></tr>
+                    <tr><td>address</td><td class="type">VARCHAR(255)</td><td>JOIN addresses</td></tr>
+                    <tr><td>count_service</td><td class="type">INT</td><td>COUNT(*)</td></tr>
+                    <tr><td>priority</td><td class="type">VARCHAR(10)</td><td>HIGH / MED / LOW</td></tr>
+                </table>
+                <div style="margin-top:12px; font-size:11px; color:#94a3b8; border-top:1px solid #334155; padding-top:10px;">
+                    <strong style="color:#c084fc;">Priority:</strong><br>
+                    HIGH: &gt;10x &nbsp;|&nbsp; MED: 5—10x &nbsp;|&nbsp; LOW: &lt;5x
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ════════ LEGEND ════════ -->
+    <div class="legend">
+        <h4>Legend & Data Flow</h4>
+        <div class="legend-items">
+            <div class="legend-item">
+                <div class="legend-dot" style="background:#3b82f6;"></div>
+                Level 1 — Raw / Landing (data as-is)
+            </div>
+            <div class="legend-item">
+                <div class="legend-dot" style="background:#22c55e;"></div>
+                Level 2 — Cleaned / Staging (standardized)
+            </div>
+            <div class="legend-item">
+                <div class="legend-dot" style="background:#a855f7;"></div>
+                Level 3 — Datamart (aggregated reports)
+            </div>
+            <div class="legend-item">
+                <span class="pk">PK</span> Primary Key
+            </div>
+            <div class="legend-item">
+                <span class="fk">FK</span> Foreign Key
+            </div>
+            <div class="legend-item">
+                <span style="color:#4ade80;">green italic</span> = kolom baru (cleaning/audit)
+            </div>
+            <div class="legend-item">
+                ⚠️ = data quality issue di raw
+            </div>
+        </div>
+    </div>
+
+    <!-- ════════ PIPELINE SUMMARY ════════ -->
+    <div class="legend" style="margin-top: 20px;">
+        <h4>📅 Daily Pipeline Order</h4>
+        <div style="display:flex; align-items:center; gap:16px; flex-wrap:wrap; font-size:13px; margin-top:8px;">
+            <div style="background:#1e3a5f; padding:8px 16px; border-radius:8px; border:1px solid #2563eb40;">
+                <strong>① ingest_customer_address.py</strong><br>
+                <span style="color:#64748b; font-size:11px;">CSV → customer_addresses_raw</span>
+            </div>
+            <span style="color:#64748b;">→</span>
+            <div style="background:#1a3a2a; padding:8px 16px; border-radius:8px; border:1px solid #22c55e40;">
+                <strong>② clean_data.py</strong><br>
+                <span style="color:#64748b; font-size:11px;">raw → cleaned tables</span>
+            </div>
+            <span style="color:#64748b;">→</span>
+            <div style="background:#3b1f4a; padding:8px 16px; border-radius:8px; border:1px solid #a855f740;">
+                <strong>③ build_datamart.py</strong><br>
+                <span style="color:#64748b; font-size:11px;">cleaned → datamart reports</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="footer">
+        Data Warehouse Design — PT Maju Jaya &nbsp;|&nbsp; Generated 2026-03-15
+    </div>
+
+</body>
+</html>

@@ -1,0 +1,25 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.venv/
+venv/
+env/
+*.egg-info/
+
+# IDE
+.vscode/
+.idea/
+
+# Docker
+mysql_data/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Archives (generated at runtime)
+data_archive/*.csv
+
+# Env (keep .env.example, ignore actual .env if sensitive)
+# .env
