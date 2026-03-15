@@ -1,0 +1,35 @@
+# Walkthrough — Task 1–4 Complete
+
+## Task 1: Data Landing ✅
+CSV ingestion pipeline: `customer_address_YYYYMMDD.csv` → MySQL
+
+## Task 2: Datamart ✅
+- **2a**: Data cleaning (dob, price, casing)
+- **2b**: `dm_sales_report` + `dm_service_report`
+
+## Task 3: DW Design ✅
+3-level architecture diagram: [dw_architecture.html](file:///d:/astraworld/design/dw_architecture.html)
+
+![DW Architecture — Top](file:///C:/Users/LENOVO/.gemini/antigravity/brain/a50e06b6-5bcf-4472-af93-fc7f7a64835c/dw_architecture_top_v2_1773535621288.png)
+
+## Task 4: Docker Compose ✅
+
+### Docker Compose Results
+
+```
+dw-mysql      Up 5 minutes (healthy)     ✅
+dw-pipeline   Exited (0) 5 minutes ago   ✅ (success)
+```
+
+Pipeline berjalan end-to-end di Docker:
+1. MySQL container start → init.sql creates all tables + seed data
+2. Pipeline container waits for MySQL healthy → runs ingest → clean → datamart
+3. Data confirmed in `dm_sales_report` and `dm_service_report`
+
+### Fix Applied
+- [.env](file:///d:/astraworld/.env) — removed `MYSQL_USER=root` (not allowed by MySQL Docker image)
+- [docker-compose.yml](file:///d:/astraworld/docker-compose.yml) — pipeline env vars defined separately in `environment` block
+
+### Git
+- Repo: https://github.com/RADEST/otomotif
+- 2 commits on [main](file:///d:/astraworld/datamart/clean_data.py#278-283) branch

@@ -34,7 +34,7 @@ logger = logging.getLogger(__name__)
 
 QUERY_SALES_REPORT = """
 SELECT
-    DATE_FORMAT(s.invoice_date, '%%Y-%%m')  AS periode,
+    CONCAT(YEAR(s.invoice_date), '-', LPAD(MONTH(s.invoice_date), 2, '0'))  AS periode,
     CASE
         WHEN s.price_numeric BETWEEN 100000000 AND 250000000  THEN 'LOW'
         WHEN s.price_numeric BETWEEN 250000001 AND 400000000  THEN 'MEDIUM'
